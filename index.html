@@ -1,11 +1,11 @@
 <html>
 <head>
-	<title>Converting PropSpinner to HTML5 Canvas</title>
+	<title>My HTML5 / Canvas prop-spinning visualizer</title>
 	<script>
-		var HEIGHT = 500;
-		var WIDTH = 500;
-		var ORIGINX = 250;
-		var ORIGINY = 250;
+		var HEIGHT = 400;
+		var WIDTH = 400;
+		var ORIGINX = WIDTH/2;
+		var ORIGINY = HEIGHT/2;
 		var BACKGROUND = "black";
 
 		var BEAT = 180;
@@ -32,6 +32,7 @@
 		var QUARTER = 0.5*Math.PI;
 		
 		var myProps = new Array();
+		var controller = new Controller();
 		
 		function init() {
 			ctx=document.getElementById('canvas').getContext('2d');
@@ -51,32 +52,18 @@
 			propTwo.renderer.head_color = "blue";
 			propTwo.renderer.handle_color = "blue";
 
-			propOne.addMove(new SimpleMove());
-			propTwo.addMove(new SimpleMove());
-			//propOne.addMove(new Flower(CLOCKWISE,INSPIN,4,1,1,1));
+			var move;
+			move = new SimpleMove();
+			move.isOneShot = true;
+			move.initHandAngle = TWELVE;
+			move.initPropAngle = TWELVE;
+			propOne.addMove(move);
+			move = new SimpleMove();
+			move.isOneShot = true;
+			move.initHandAngle = SIX;
+			move.initPropAngle = SIX;
+			propTwo.addMove(move);
 
-			//propOne.addMove(new CCap(COUNTERCLOCKWISE, INSPIN,0,4,1,1));
-			//propTwo.addMove(new CCap(CLOCKWISE, INSPIN,0,4,1,1));
-			//propOne.addMove(new Star(CLOCKWISE, 3, 1, 1, 1));
-			//propTwo.addMove(new Star(COUNTERCLOCKWISE, 1, 3, 1, 1));
-			//propTwo.addPartneredMove(propOne,new TwoPropButterfly());
-			//propTwo.addPartneredMove(propOne,new IsoExtend(CLOCKWISE, 1));
-			//propOne.addMove(new OnePointFive(CLOCKWISE, 1, 1));
-			//propTwo.addMove((new OnePointFive(CLOCKWISE, 1, 1)).changePhase(1));
-			//propOne.addMove(new IsoPop(CLOCKWISE, INSPIN, INSPIN, SPLIT, 1));
-			//propTwo.addMove((new IsoPop(CLOCKWISE, INSPIN, INSPIN, SPLIT, 1)).changePhase(1));
-			//propOne.addMove(new Isolation(CLOCKWISE, INSPIN, SPLIT, 1, 1));
-			//propTwo.addMove(new Isolation(COUNTERCLOCKWISE, ANTISPIN, SPLIT, 1, 1));
-
-			
-			//propTwo.addMove(new StallEntry(CLOCKWISE, INSPIN, 2, 1, 1));
-			//propTwo.addMove(new StallExit(COUNTERCLOCKWISE, INSPIN, 2, 1, 1));
-			//propTwo.addMove(new StallEntry(COUNTERCLOCKWISE, INSPIN, 2, 1, 1));
-			//propTwo.addMove(new StallExit(CLOCKWISE, INSPIN, 2, 1, 1));
-
-			propTwo.rotateHand(SPLIT);
-			propTwo.rotateProp(SPLIT);
-			
 			myProps.push(propOne);
 			myProps.push(propTwo);
 		}
@@ -146,7 +133,7 @@
 				}
 			} else {
 				if (x<0) {convert = Math.PI;}
-				this.setHandAngle(Math.atan(y-this.getHomeExtendY()/(x-this.getHomeExtendX()))+convert);
+				this.setHandAngle(Math.atan((y-this.getHomeExtendY())/(x-this.getHomeExtendX()))+convert);
 			}
 		}
 		Prop.prototype.nudge = function(distance, angle) {
@@ -213,6 +200,7 @@
 	
 		Prop.prototype.spin = function() {
 			if (this.myMoveQueue === undefined) {this.myMoveQueue = new CompositeMove(); this.myMoveQueue.myProp = this;}
+			if (this.myMoveQueue.mySubMoves.length==0) {controller.queueIsEmpty();}
 			this.myMoveQueue.spin(this);
 		}
 		Prop.prototype.addMove = function(myMove) {
@@ -387,6 +375,8 @@
 			this.isStarted = false;
 			this.isFinished = false;
 			this.isOneShot = false;
+			this.flower = false;
+			this.tally = 0;
 		}
 		CompositeMove.prototype.resetSubMoves = function() {
 			for(var i=0;i<this.mySubMoves.length;i++) {
@@ -402,24 +392,23 @@
 			if (this.isStarted == false) {this.setUpProp(myProp);}
 			this.isStarted = true;
 			this.isFinished = false;
-			if (this.mySubMoves === undefined || this.mySubMoves.length == 0) {this.isFinished = true;}
-			else {
-				this.nextMove = this.mySubMoves[0];
-				if (this.nextMove.isFinished==true) {
-					if (this.nextMove.isOneShot==true) {
-						this.mySubMoves.shift();
-					} else {
-						this.mySubMoves.push(this.mySubMoves.shift());
-					}
-					this.nextMove = this.mySubMoves[0];
-					if (this.nextMove.isFinished == true) {
-						this.isFinished = true;
-						this.resetSubMoves();
-					}
+			if (this.mySubMoves === undefined || this.mySubMoves.length == 0) {this.alert("bad move!"); return;}
+			var nextMove = this.mySubMoves[0];
+			nextMove.spin(myProp);
+			if(nextMove.isFinished==true) {
+				if (nextMove.isOneShot==true) {
+					this.mySubMoves.shift();
+				} else {
+					this.mySubMoves.push(this.mySubMoves.shift());
 				}
-				this.nextMove.spin(myProp);					
+				if (this.mySubMoves.length==0 || this.mySubMoves[0].isFinished == true) {
+					this.isFinished = true;
+					this.resetSubMoves();
+				}
 			}
 		}
+		
+		
 		CompositeMove.prototype.addMove = function(myMove) {
 			if (this.mySubMoves === undefined) {this.mySubMoves = new Array();}
 			this.mySubMoves.push(myMove);
@@ -430,7 +419,14 @@
 			this.mySubMoves = this.mySubMoves.concat(myMove.mySubMoves);
 		}
   		CompositeMove.prototype.setUpProp = function(myProp) {this.autoAlign(myProp);}
-  		CompositeMove.prototype.autoAlign = function(myProp) {}
+  		CompositeMove.prototype.autoAlign = function(myProp) {
+	  		if ('undefined' !== typeof this.initHandAngle) {
+		  		myProp.setHandAngle(this.initHandAngle);
+	  		}
+	  		if ('undefined' !== typeof this.initPropAngle) {
+		  		myProp.setTetherAngle(this.initPropAngle);
+	  		}
+  		} 
 
 		//Phasing
 		CompositeMove.prototype.newPhase = function() {
@@ -489,6 +485,7 @@
 		SimpleMove.prototype.getSubMove = function() {return this;}
 		SimpleMove.prototype.getPosition = function() {return this.t/(BEAT*this.beats);}	
 		SimpleMove.prototype.spin = function(myProp) {
+			if (this.isStarted == false) {this.setUpProp(myProp);}
 			this.isStarted = true;
 			if (this.beats==0) {this.isFinished = true; return;}
 			this.isFinished = false;
@@ -519,6 +516,15 @@
 		SimpleMove.prototype.extendProp = function(myProp) {
 			myProp.tether_extend = this.begin_prop_extend + this.getPosition()*(this.end_prop_extend - this.begin_prop_extend);
 		}
+		SimpleMove.prototype.setUpProp = function(myProp) {this.autoAlign(myProp);}
+		SimpleMove.prototype.autoAlign = function(myProp) {
+	  		if ('undefined' !== typeof this.initHandAngle) {
+		  		myProp.setHandAngle(this.initHandAngle);
+	  		}
+	  		if ('undefined' !== typeof this.initPropAngle) {
+		  		myProp.setTetherAngle(this.initPropAngle);
+	  		}
+  		} 
 		
 		function SimpleLinear() {this.hand_trajectory = 0;}
 		SimpleLinear.prototype = new SimpleMove();
@@ -527,7 +533,7 @@
 			var x = myProp.getHandExtendX();
 			var y = myProp.getHandExtendY();
 			// using (1/BEAT) instead of SPEED makes it go in extensions instead of radians
-    		myProp.setHandExtendXY(x+Math.cos(this.hand_trajectory)*hand_speed/BEAT,y+Math.sin(this.hand_trajectory)*hand_speed/BEAT);
+			myProp.setHandExtendXY(x+Math.cos(this.hand_trajectory)*hand_speed/BEAT,y+Math.sin(this.hand_trajectory)*hand_speed/BEAT);
 		}
 		
 		function SimpleArc() {
@@ -590,6 +596,7 @@
 		StallExit.prototype = new CompositeMove();
 	
 		function Flower(dir, spin, petals, extend, speed, beats) {
+			this.flower = true;
 			var myMove = new SimpleMove();
 			myMove.beats = beats;
 			if (spin==INSPIN)
@@ -603,22 +610,15 @@
 		Flower.prototype = new CompositeMove();
 	
 		function CCap(dir, inpetals, antipetals, extend, speed) {
-			this.addMove(new Flower(dir, INSPIN, inpetals, extend, speed, 0.25/speed));	
-			this.addMove(new Flower(-dir, ANTISPIN, antipetals, extend, speed, 0.25/speed));
-			this.addMove(new Flower(-dir, ANTISPIN, antipetals, extend, speed, 0.25/speed));
 			this.addMove(new Flower(dir, INSPIN, inpetals, extend, speed, 0.25/speed));
+			this.addMove(new Flower(dir, INSPIN, inpetals, extend, speed, 0.25/speed));
+			this.addMove(new Flower(-dir, ANTISPIN, antipetals, extend, speed, 0.25/speed));
+			this.addMove(new Flower(-dir, ANTISPIN, antipetals, extend, speed, 0.25/speed));
 		}
 		CCap.prototype = new CompositeMove();
 
 		function Pendulum(dir, extend, speed) {	
 			var myMove;
-			myMove = new SimpleMove();
-			myMove.beats = 0.25;
-			myMove.setHandExtend(extend);
-			myMove.setHandSpeed(dir*speed);
-			myMove.begin_prop_speed = 0;
-			myMove.end_prop_speed = 2*INSPIN*dir*speed;
-			this.addMove(myMove);
 			myMove = new SimpleMove();
 			myMove.beats = 0.25;
 			myMove.setHandExtend(extend);
@@ -640,18 +640,31 @@
 			myMove.begin_prop_speed = 2*ANTISPIN*dir*speed;
 			myMove.end_prop_speed = 0;
 			this.addMove(myMove);
-		}
-		Pendulum.prototype = new CompositeMove();
-
-		function OnePointFive(dir, extend, speed) {	
-			var myMove;
 			myMove = new SimpleMove();
 			myMove.beats = 0.25;
 			myMove.setHandExtend(extend);
 			myMove.setHandSpeed(dir*speed);
 			myMove.begin_prop_speed = 0;
-			myMove.end_prop_speed = 6*INSPIN*dir*speed;
+			myMove.end_prop_speed = 2*INSPIN*dir*speed;
 			this.addMove(myMove);
+		}
+		Pendulum.prototype = new CompositeMove();
+		Pendulum.prototype.autoAlign = function(myProp) {
+	  		if ('undefined' !== typeof this.initHandAngle) {
+		  		myProp.setHandAngle(this.initHandAngle);
+	  		}
+	  		if ('undefined' !== typeof this.initPropAngle) {
+				if (this.initHandAngle == TWELVE) {
+					this.changePhase(2);
+					myProp.setTetherAngle(OFFSET+this.initHandAngle);
+				} else {
+					myProp.setTetherAngle(this.initHandAngle);
+				}
+	  		}
+  		} 
+
+		function OnePointFive(dir, extend, speed) {	
+			var myMove;
 			myMove = new SimpleMove();
 			myMove.beats = 0.25;
 			myMove.setHandExtend(extend);
@@ -673,8 +686,26 @@
 			myMove.begin_prop_speed = 2*ANTISPIN*dir*speed;
 			myMove.end_prop_speed = 0;
 			this.addMove(myMove);
+			myMove = new SimpleMove();
+			myMove.beats = 0.25;
+			myMove.setHandExtend(extend);
+			myMove.setHandSpeed(dir*speed);
+			myMove.begin_prop_speed = 0;
+			myMove.end_prop_speed = 6*INSPIN*dir*speed;
+			this.addMove(myMove);
 		}
 		OnePointFive.prototype = new CompositeMove();
+		OnePointFive.prototype.autoAlign = function(myProp) {
+	  		if ('undefined' !== typeof this.initHandAngle) {
+		  		myProp.setHandAngle(this.initHandAngle);
+	  		}
+	  		if ('undefined' !== typeof this.initPropAngle) {
+				if (this.initHandAngle == TWELVE) {
+					this.changePhase(2);
+				}
+				myProp.setTetherAngle(OFFSET+this.initHandAngle);
+	  		}
+  		} 
 
 		function Star(dir, inspeed, antispeed, extend, speed) {
 			var myMove;
@@ -770,10 +801,10 @@
 		}
 		TwoPropButterfly.prototype = new PartneredMove();
 
-		function Isolation(dir, spin, split, speed, beats) {
-		// An in-spin isolation requires split-time poi.  An anti-spin isolation is a cateye;
+		function Isolation(dir, spin, offset, speed, beats) {
+		// A no-offset isolation is a unit-circle extension. An anti-spin isolation is a cateye;
 			var myMove = new SimpleMove();
-			this.split = split;
+			this.offset = offset;
 			myMove.beats = beats;
 			myMove.setPropSpeed(spin*dir*speed);
 			myMove.setHandExtend(0.5);
@@ -782,8 +813,13 @@
 		}
 		Isolation.prototype = new CompositeMove();
 		Isolation.prototype.autoAlign = function(myProp) {
-			myProp.setAngleOffset(myProp.hand_angle, this.split);
-		}
+	  		if ('undefined' !== typeof this.initHandAngle) {
+		  		myProp.setHandAngle(this.initHandAngle);
+	  		}
+	  		if ('undefined' !== typeof this.initPropAngle) {
+		  		myProp.setTetherAngle(this.offset+this.initPropAngle);
+	  		}
+  		} 
 
 		function StaticSpin(dir, speed, beats) {
     			var mySpin = new SimpleMove();
@@ -813,6 +849,7 @@
 			var coil = new SimpleLinear();
 			var uncoil = new SimpleLinear();
 			this.angle = angle;
+			this.dir = dir;
 			coil.beats = 0.5;
 			uncoil.beats = 0.5;
 			coil.setPropSpeed(coils*dir*speed);
@@ -822,15 +859,15 @@
 			coil.hand_trajectory = angle;
 			uncoil.begin_hand_speed = 8*speed;
 			uncoil.end_hand_speed = -8*speed;
-			uncoil.hand_trajectory = Math.PI+angle;
+			uncoil.hand_trajectory = OFFSET+angle;
 			this.addMove(coil);
 			this.addMove(uncoil);
 		}
 		Snake.prototype = new CompositeMove();
 		Snake.prototype.autoAlign = function(myProp) {
+			myProp.setTetherAngle(this.angle-this.dir*STAGGER);
 			myProp.hand_extend = 0;
-			myProp.setTetherAngle(this.angle-STAGGER);
-		}
+  		} 
 		
 		function Lock(extend, beats) {
 			move = new SimpleMove();
@@ -867,11 +904,25 @@
 				myProp.setTetherAngle(TWELVE);
 			}
 		}
-
-		function changeProp(prop, list) {
-			var mylist = document.getElementById(list);
-			var txt = mylist.options[mylist.selectedIndex].value;
+		
+		function Controller() {
+			this.handDir = [CLOCKWISE,CLOCKWISE];
+			this.propAng = [TWELVE,SIX];
+			this.handAng = [TWELVE,SIX];		
+		}
+		Controller.prototype.queueIsEmpty = function() {
+			this.updateParameters();
+		}
+		Controller.prototype.updateParameters = function() {
+			var list;
+			var txt;
 			var renderer;
+			var move;
+			var propn;
+			
+			//Update first prop type
+			list = document.getElementById("firstProp");
+			txt = list.options[list.selectedIndex].value;	
 			if (txt=="Poi") {
 				renderer = new Poi();
 			} else if (txt=="Fire Poi") {
@@ -883,114 +934,218 @@
 			} else if (txt=="Fire Fan") {
 				renderer = new FireFan();
 			}
-			renderer.head_color = prop.renderer.head_color;
-			renderer.handle_color = prop.renderer.head_color;
-			prop.renderer = renderer;
-			renderer.prop = prop;
+			renderer.head_color = myProps[0].renderer.head_color;
+			renderer.handle_color = myProps[0].renderer.head_color;
+			myProps[0].renderer = renderer;
+			renderer.prop = myProps[0];
+			
+			//Update second prop type
+			list = document.getElementById("secondProp");
+			txt = list.options[list.selectedIndex].value;	
+			if (txt=="Poi") {
+				renderer = new Poi();
+			} else if (txt=="Fire Poi") {
+				renderer = new FirePoi();
+			} else if (txt=="Fire Hoop") {
+				renderer = new FireHoop();
+			} else if (txt=="Fire Staff") {
+				renderer = new MiniStaff();
+			} else if (txt=="Fire Fan") {
+				renderer = new FireFan();
+			}
+			renderer.head_color = myProps[1].renderer.head_color;
+			renderer.handle_color = myProps[1].renderer.head_color;
+			myProps[1].renderer = renderer;
+			renderer.prop = myProps[1];
+			
+			//Update prop relations for next move
+			list = document.getElementById("propRelations");
+			txt = list.options[list.selectedIndex].value;
+			if (txt=="Same") {
+				this.propAng[0] = TWELVE;
+				this.propAng[1] = TWELVE;
+			}
+			else if (txt=="Split") {
+				this.propAng[0] = TWELVE;
+				this.propAng[1] = SIX;
+			}
+			
+			//Update hand relations for next move
+			list = document.getElementById("handRelations");
+			txt = list.options[list.selectedIndex].value;
+			if (txt=="Same") {
+				this.handAng[0] = TWELVE;
+				this.handAng[1] = TWELVE;
+			}
+			else if (txt=="Split") {
+				this.handAng[0] = TWELVE;
+				this.handAng[1] = SIX;
+			}
+			
+			//Update spin directions for next move
+			list = document.getElementById("spinDirections");
+			txt = list.options[list.selectedIndex].value;
+			if (txt=="Same") {
+				this.handDir[0] = CLOCKWISE;
+				this.handDir[1] = CLOCKWISE;
+			}
+			else if (txt=="Opposite") {
+				this.handDir[0] = CLOCKWISE;
+				this.handDir[1] = COUNTERCLOCKWISE;
+			}
+			
+			//Generate the next move for the first prop
+			list = document.getElementById("firstMove");
+			txt = list.options[list.selectedIndex].value;
+			move = this.generateMove(0,txt);
+			move.isOneShot = true;
+			move.initHandAngle = this.handAng[0];
+			move.initPropAngle = this.propAng[0];
+			while (myProps[0].myMoveQueue.length > 1) {
+				myProps[0].myMoveQueue.pop();
+			}
+			myProps[0].addMove(move);
+			
+			//Generate the next move for the second prop
+			list = document.getElementById("secondMove");
+			txt = list.options[list.selectedIndex].value;
+			move = this.generateMove(1,txt);
+			move.isOneShot = true;
+			move.initHandAngle = this.handAng[1];
+			move.initPropAngle = this.propAng[1];
+			while (myProps[1].myMoveQueue.length > 1) {
+				myProps[1].myMoveQueue.pop();
+			}
+			myProps[1].addMove(move);	
 		}
-		
-		function changeDirection(prop, list) {
-			var mylist = document.getElementById(list);
-			var txt = mylist.options[mylist.selectedIndex].value;
-			if (txt=="Same") {myProps[1].ad_hoc_tag = CLOCKWISE;}
-			else if (txt=="Opposite") {myProps[1].ad_hoc_tag = COUNTERCLOCKWISE;}
-			changeMove(myProps[1],"secondMoveList");
-		}
-		function changeMove(prop, list) {
-			var mylist = document.getElementById(list);
-			var txt = mylist.options[mylist.selectedIndex].value;
+		Controller.prototype.generateMove = function(n, txt) {
 			var move;
-			var dir = CLOCKWISE;
-			if (list=="secondMoveList") {
-				if(myProps[1].ad_hoc_tag === undefined) {myProps[1].ad_hoc_tag = CLOCKWISE;}
-				dir = myProps[1].ad_hoc_tag;
-			}
 			if (txt=="Static Spin") {
-				move = new StaticSpin(dir,1,1);
+				move = new StaticSpin(this.handDir[n],1,1);
 			} else if (txt=="Extension") {
-				move = new Flower(dir,INSPIN,0,1,1,1);
+				move = new Flower(this.handDir[n],INSPIN,0,1,1,1);
 			} else if (txt=="One-Petal In-Spin Flower") {
-				move = new Flower(dir,INSPIN,1,1,1,1);
+				move = new Flower(this.handDir[n],INSPIN,1,1,1,1);
 			} else if (txt=="Two-Petal In-Spin Flower") {
-				move = new Flower(dir,INSPIN,2,1,1,1);
+				move = new Flower(this.handDir[n],INSPIN,2,1,1,1);
 			} else if (txt=="Four-Petal In-Spin Flower") {
-				move = new Flower(dir,INSPIN,4,1,1,1);
+				move = new Flower(this.handDir[n],INSPIN,4,1,1,1);
 			} else if (txt=="Three-Petal Anti-Spin Flower") {
-				move = new Flower(dir,ANTISPIN,3,1,1,1);
+				move = new Flower(this.handDir[n],ANTISPIN,3,1,1,1);
 			} else if (txt=="Four-Petal Anti-Spin Flower") {
-				move = new Flower(dir,ANTISPIN,4,1,1,1);
-			} else if (txt=="C-CAP") {
-				move = new CCap(dir,0,4,1,1);
+				move = new Flower(this.handDir[n],ANTISPIN,4,1,1,1);
+			} else if (txt=="Horizontal C-CAP") {
+				move = new CCap(this.handDir[n],0,4,1,1);
+			} else if (txt=="Vertical C-CAP") {
+				move = new CCap(this.handDir[n],0,4,1,1);
+				move.changePhase(1);
 			} else if (txt=="Star") {
-				move = new Star(dir, 3, 1, 1, 1);
+				move = new Star(this.handDir[n], 3, 1, 1, 1);
 			} else if (txt=="Pendulum") {
-				move = new Pendulum(dir, 1, 1);
-				if (list=="secondMoveList") {move.changePhase(2);}
-				if (dir==COUNTERCLOCKWISE) {move.changePhase(2);}
+				move = new Pendulum(this.handDir[n], 1, 1);
 			} else if (txt=="1.5") {
-				move = new OnePointFive(dir, 1, 1);
-				if (list=="secondMoveList") {move.changePhase(2);}
-				if (dir==COUNTERCLOCKWISE) {move.changePhase(2);}
+				move = new OnePointFive(this.handDir[n], 1, 1);
 			} else if (txt=="Isolation") {
-				move = new Isolation(dir, INSPIN, SPLIT, 1, 1);
-			} else if (txt=="Unit Circle Extension") {
-				move = new Isolation(dir, INSPIN, SAME, 1, 1);
-			} else if (txt=="Vertical Cat-Eye") {
-				move = new Isolation(dir, ANTISPIN, SPLIT, 1, 1);
-			} else if (txt=="Horizontal Cat-Eye") {
-				move = new Isolation(dir, ANTISPIN, SAME, 1, 1);
+				move = new Isolation(this.handDir[n], INSPIN, SPLIT, 1, 1);
+			} else if (txt=="Cat-Eye") {
+				move = new Isolation(this.handDir[n], ANTISPIN, SPLIT, 1, 1);
 			} else if (txt=="Iso-Pop") {
-				move = new IsoPop(dir, INSPIN, INSPIN, SPLIT, 1);
+				move = new IsoPop(this.handDir[n], INSPIN, INSPIN, SPLIT, 1);
 			} else if (txt=="Iso-Break") {
-				move = new IsoPop(dir, INSPIN, ANTISPIN, SPLIT, 1);
+				move = new IsoPop(this.handDir[n], INSPIN, ANTISPIN, SPLIT, 1);
 			} else if (txt=="Horizontal Linear Extension") {
-				if (list=="secondMoveList") {move = new Snake(NINE, dir, 1, 1);}
-				else {move = new Snake(THREE,dir, 1, 1);}
-			} else if (txt=="Stall Chaser") {
-				var phase = 0;
-				if (list=="secondMoveList") {
-					phase = 3;
-				}
-				move = new StallChaser(dir, phase, 1, 1);	
-			}
-			for(var i = 0; i < prop.myMoveQueue.mySubMoves.length; i++) {
-				prop.myMoveQueue.mySubMoves[i].isOneShot = true;
-			}
-			prop.addMove(move);
+				move = new Snake(this.handAng[n]+STAGGER,this.handDir[n], 1, 1);
+			} else if (txt=="Vertical Linear Extension") {
+				move = new Snake(this.handAng[n],this.handDir[n], 1, 1);
+			} 
+			return move;
 		}
 	</script>
 </head>
 <body onLoad="init();">
+<table>
+<tr>
+<td rowspan = "5">
 	<canvas id="canvas">
 		Your browser doesn't support the HTML5 element canvas.
 	</canvas>
-</body>
+</td>
+<td>
+First Prop:
+</td>
 <form>
-	<select id="firstPropList" onchange="changeProp(myProps[0],'firstPropList')">
+<td>
+	<select id="firstProp" onchange="controller.updateParameters()">
 		<option selected>Poi</option>
 		<option>Fire Poi</option>
 		<option>Fire Hoop</option>
 		<option>Fire Staff</option>
 		<option>Fire Fan</option>
 	</select>
+
+</td>
 </form>
+<td>
+Second Prop:
+</td>
 <form>
-	<select id="secondPropList" onchange="changeProp(myProps[1],'secondPropList')">
+<td>
+	<select id="secondProp" onchange="controller.updateParameters()">
 		<option selected>Poi</option>
 		<option>Fire Poi</option>
 		<option>Fire Hoop</option>
 		<option>Fire Staff</option>
 		<option>Fire Fan</option>
 	</select>
+</td>
 </form>
+</tr>
+<tr>
+<td>
+Hand Relations:
+</td>
 <form>
-	<select id="directions" onchange="changeDirection(myProps[1],'directions')">
+<td>
+	<select id="handRelations" onchange="controller.updateParameters()">
+		<option>Same</option>
+		<option selected>Split</option>
+	</select>
+</td>
+</form>
+<td>
+Prop Relations:
+</td>
+<form>
+<td>
+	<select id="propRelations" onchange="controller.updateParameters()">
+		<option>Same</option>
+		<option selected>Split</option>
+	</select>
+</td>
+</form>
+</tr>
+<tr>
+<td>
+Spin Directions:
+</td>
+<form>
+<td>
+	<select id="spinDirections" onchange="controller.updateParameters()">
 		<option selected>Same</option>
 		<option>Opposite</option>
 	</select>
+</td>
 </form>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>
+First Move:
+</td>
 <form>
-	<select id="firstMoveList" onchange="changeMove(myProps[0],'firstMoveList')">
+<td colspan="3">
+	<select id="firstMove" onchange="controller.updateParameters()">
 		<option selected>Static Spin</option>
 		<option>Extension</option>
 		<option>One-Petal In-Spin Flower</option>
@@ -998,22 +1153,28 @@
 		<option>Four-Petal In-Spin Flower</option>
 		<option>Three-Petal Anti-Spin Flower</option>
 		<option>Four-Petal Anti-Spin Flower</option>
-		<option>C-CAP</option>
+		<option>Horizontal C-CAP</option>
+		<option>Vertical C-CAP</option>
 		<option>Star</option>
 		<option>Pendulum</option>
 		<option>1.5</option>
 		<option>Isolation</option>
-		<option>Unit Circle Extension</option>
-		<option>Vertical Cat-Eye</option>
-		<option>Horizontal Cat-Eye</option>
+		<option>Cat-Eye</option>
 		<option>Iso-Pop</option>
 		<option>Iso-Break</option>
 		<option>Horizontal Linear Extension</option>
-		<option>Stall Chaser</option>
+		<option>Vertical Linear Extension</option>
 	</select>
+</td>
 </form>
+</tr>
+<tr>
+<td>
+Second Move:
+</td>
 <form>
-	<select id="secondMoveList" onchange="changeMove(myProps[1],'secondMoveList')">
+<td colspan="3">
+	<select id="secondMove" onchange="controller.updateParameters()">
 		<option selected>Static Spin</option>
 		<option>Extension</option>
 		<option>One-Petal In-Spin Flower</option>
@@ -1021,18 +1182,22 @@
 		<option>Four-Petal In-Spin Flower</option>
 		<option>Three-Petal Anti-Spin Flower</option>
 		<option>Four-Petal Anti-Spin Flower</option>
-		<option>C-CAP</option>
+		<option>Horizontal C-CAP</option>
+		<option>Vertical C-CAP</option>
 		<option>Star</option>
 		<option>Pendulum</option>
 		<option>1.5</option>
 		<option>Isolation</option>
-		<option>Unit Circle Extension</option>
-		<option>Vertical Cat-Eye</option>
-		<option>Horizontal Cat-Eye</option>
+		<option>Cat-Eye</option>
 		<option>Iso-Pop</option>
 		<option>Iso-Break</option>
 		<option>Horizontal Linear Extension</option>
-		<option>Stall Chaser</option>
+		<option>Vertical Linear Extension</option>
 	</select>
+</td>
 </form>
+
+</tr>
+</table>
+</body>
 </html>
