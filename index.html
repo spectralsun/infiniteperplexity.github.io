@@ -1,6 +1,7 @@
 <html>
 <head>
-	<title>My HTML5 / Canvas prop-spinning visualizer</title>
+	<title>VisualSpinner 1.0</title>
+	<script src="http://code.jquery.com/jquery-1.10.2.min.js"> </script>
 	<script>
 		var HEIGHT = 400;
 		var WIDTH = 400;
@@ -34,8 +35,19 @@
 		var myProps = new Array();
 		var controller = new Controller();
 		
+		$.urlParam = function(name){
+			var results = new RegExp('[\\?&]' + name + '=([^&#]*)').exec(window.location.href);
+			if (!results) {return 0;}
+			return results[1] || 0;
+		}
+		
 		function init() {
 			ctx=document.getElementById('canvas').getContext('2d');
+			var params = ["1prop","2prop","hands","props","spins","1move","2move"];
+			for (var i = 0; i<params.length; i++) {
+				var txt = $.urlParam(params[i]);
+				if (txt!=0) {$("#"+params[i]).val(txt);}
+			}
 			canvasSetup();
 			canvasLoop();
 		}
@@ -51,7 +63,7 @@
 			var propTwo = new Prop(new Poi());
 			propTwo.renderer.head_color = "blue";
 			propTwo.renderer.handle_color = "blue";
-
+			
 			var move;
 			move = new SimpleMove();
 			move.isOneShot = true;
@@ -66,6 +78,8 @@
 
 			myProps.push(propOne);
 			myProps.push(propTwo);
+			
+			controller.updateParameters();
 		}
 
 
@@ -313,6 +327,22 @@
 			this.drawWick(this.prop.getPixelLength(),0,this.head_size);
 			ctx.restore();
 		};
+		
+		function MiniHoop() {}
+		MiniHoop.prototype = new PropRenderer();
+		MiniHoop.prototype.render = function() {
+			var wick_length = 25;
+			var num_wicks = 4;
+			ctx.save();
+			ctx.translate(0.5*this.prop.getPixelLength(),0);
+			ctx.beginPath();
+			ctx.arc(0,0,0.5*this.prop.getPixelLength(),0,UNIT);
+			ctx.strokeStyle = this.handle_color;
+			ctx.lineWidth = this.handle_size;
+			ctx.stroke();
+			ctx.restore();
+		}
+		
 		
 		function FireHoop() {}
 		FireHoop.prototype = new PropRenderer();
@@ -921,17 +951,19 @@
 			var propn;
 			
 			//Update first prop type
-			list = document.getElementById("firstProp");
+			list = document.getElementById("1prop");
 			txt = list.options[list.selectedIndex].value;	
-			if (txt=="Poi") {
+			if (txt=="poi") {
 				renderer = new Poi();
-			} else if (txt=="Fire Poi") {
+			} else if (txt=="fpoi") {
 				renderer = new FirePoi();
-			} else if (txt=="Fire Hoop") {
+			} else if (txt="hoop") {
+				renderer = new MiniHoop();
+			} else if (txt=="fhoop") {
 				renderer = new FireHoop();
-			} else if (txt=="Fire Staff") {
+			} else if (txt=="fstaff") {
 				renderer = new MiniStaff();
-			} else if (txt=="Fire Fan") {
+			} else if (txt=="ffan") {
 				renderer = new FireFan();
 			}
 			renderer.head_color = myProps[0].renderer.head_color;
@@ -940,17 +972,19 @@
 			renderer.prop = myProps[0];
 			
 			//Update second prop type
-			list = document.getElementById("secondProp");
+			list = document.getElementById("2prop");
 			txt = list.options[list.selectedIndex].value;	
-			if (txt=="Poi") {
+			if (txt=="poi") {
 				renderer = new Poi();
-			} else if (txt=="Fire Poi") {
+			} else if (txt=="fpoi") {
 				renderer = new FirePoi();
-			} else if (txt=="Fire Hoop") {
+			} else if (txt="hoop") {
+				renderer = new MiniHoop();
+			} else if (txt=="fhoop") {
 				renderer = new FireHoop();
-			} else if (txt=="Fire Staff") {
+			} else if (txt=="fstaff") {
 				renderer = new MiniStaff();
-			} else if (txt=="Fire Fan") {
+			} else if (txt=="ffan") {
 				renderer = new FireFan();
 			}
 			renderer.head_color = myProps[1].renderer.head_color;
@@ -959,43 +993,43 @@
 			renderer.prop = myProps[1];
 			
 			//Update prop relations for next move
-			list = document.getElementById("propRelations");
+			list = document.getElementById("props");
 			txt = list.options[list.selectedIndex].value;
-			if (txt=="Same") {
+			if (txt=="same") {
 				this.propAng[0] = TWELVE;
 				this.propAng[1] = TWELVE;
 			}
-			else if (txt=="Split") {
+			else if (txt=="splt") {
 				this.propAng[0] = TWELVE;
 				this.propAng[1] = SIX;
 			}
 			
 			//Update hand relations for next move
-			list = document.getElementById("handRelations");
+			list = document.getElementById("hands");
 			txt = list.options[list.selectedIndex].value;
-			if (txt=="Same") {
+			if (txt=="same") {
 				this.handAng[0] = TWELVE;
 				this.handAng[1] = TWELVE;
 			}
-			else if (txt=="Split") {
+			else if (txt=="splt") {
 				this.handAng[0] = TWELVE;
 				this.handAng[1] = SIX;
 			}
 			
 			//Update spin directions for next move
-			list = document.getElementById("spinDirections");
+			list = document.getElementById("spins");
 			txt = list.options[list.selectedIndex].value;
-			if (txt=="Same") {
+			if (txt=="same") {
 				this.handDir[0] = CLOCKWISE;
 				this.handDir[1] = CLOCKWISE;
 			}
-			else if (txt=="Opposite") {
+			else if (txt=="opps") {
 				this.handDir[0] = CLOCKWISE;
 				this.handDir[1] = COUNTERCLOCKWISE;
 			}
 			
 			//Generate the next move for the first prop
-			list = document.getElementById("firstMove");
+			list = document.getElementById("1move");
 			txt = list.options[list.selectedIndex].value;
 			move = this.generateMove(0,txt);
 			move.isOneShot = true;
@@ -1007,7 +1041,7 @@
 			myProps[0].addMove(move);
 			
 			//Generate the next move for the second prop
-			list = document.getElementById("secondMove");
+			list = document.getElementById("2move");
 			txt = list.options[list.selectedIndex].value;
 			move = this.generateMove(1,txt);
 			move.isOneShot = true;
@@ -1016,46 +1050,59 @@
 			while (myProps[1].myMoveQueue.length > 1) {
 				myProps[1].myMoveQueue.pop();
 			}
-			myProps[1].addMove(move);	
+			myProps[1].addMove(move);
+			
+			var linktxt = "http://infiniteperplexity.github.io";
+			var params = ["1prop","2prop","hands","props","spins","1move","2move"];
+			for (var i = 0; i<params.length; i++) {
+				if (i==0) {
+					linktxt += "?" + params[i] + "=" + $("#"+params[i]).val();
+				} else {
+					linktxt += "&" + params[i] + "=" + $("#"+params[i]).val();
+				}
+			}
+			$('#myLink').text(linktxt);
 		}
 		Controller.prototype.generateMove = function(n, txt) {
 			var move;
-			if (txt=="Static Spin") {
+			if (txt=="stat") {
 				move = new StaticSpin(this.handDir[n],1,1);
-			} else if (txt=="Extension") {
+			} else if (txt=="xtsn") {
 				move = new Flower(this.handDir[n],INSPIN,0,1,1,1);
-			} else if (txt=="One-Petal In-Spin Flower") {
+			} else if (txt=="1pif") {
 				move = new Flower(this.handDir[n],INSPIN,1,1,1,1);
-			} else if (txt=="Two-Petal In-Spin Flower") {
+			} else if (txt=="2pif") {
 				move = new Flower(this.handDir[n],INSPIN,2,1,1,1);
-			} else if (txt=="Four-Petal In-Spin Flower") {
+			} else if (txt=="4pif") {
 				move = new Flower(this.handDir[n],INSPIN,4,1,1,1);
-			} else if (txt=="Three-Petal Anti-Spin Flower") {
+			} else if (txt=="3paf") {
 				move = new Flower(this.handDir[n],ANTISPIN,3,1,1,1);
-			} else if (txt=="Four-Petal Anti-Spin Flower") {
+			} else if (txt=="4paf") {
 				move = new Flower(this.handDir[n],ANTISPIN,4,1,1,1);
-			} else if (txt=="Horizontal C-CAP") {
+			} else if (txt=="hcap") {
 				move = new CCap(this.handDir[n],0,4,1,1);
-			} else if (txt=="Vertical C-CAP") {
+			} else if (txt=="vcap") {
 				move = new CCap(this.handDir[n],0,4,1,1);
 				move.changePhase(1);
-			} else if (txt=="Star") {
+			} else if (txt=="star") {
 				move = new Star(this.handDir[n], 3, 1, 1, 1);
-			} else if (txt=="Pendulum") {
+			} else if (txt=="pend") {
 				move = new Pendulum(this.handDir[n], 1, 1);
-			} else if (txt=="1.5") {
+			} else if (txt=="1pt5") {
 				move = new OnePointFive(this.handDir[n], 1, 1);
-			} else if (txt=="Isolation") {
+			} else if (txt=="isol") {
 				move = new Isolation(this.handDir[n], INSPIN, SPLIT, 1, 1);
-			} else if (txt=="Cat-Eye") {
+			} else if (txt=="cate") {
 				move = new Isolation(this.handDir[n], ANTISPIN, SPLIT, 1, 1);
-			} else if (txt=="Iso-Pop") {
+			} else if (txt=="utri") {
+				move = new Flower(this.handDir[n],ANTISPIN,3,0.5,1,1);
+			} else if (txt=="isop") {
 				move = new IsoPop(this.handDir[n], INSPIN, INSPIN, SPLIT, 1);
-			} else if (txt=="Iso-Break") {
+			} else if (txt=="isob") {
 				move = new IsoPop(this.handDir[n], INSPIN, ANTISPIN, SPLIT, 1);
-			} else if (txt=="Horizontal Linear Extension") {
+			} else if (txt=="hlex") {
 				move = new Snake(this.handAng[n]+STAGGER,this.handDir[n], 1, 1);
-			} else if (txt=="Vertical Linear Extension") {
+			} else if (txt=="vlex") {
 				move = new Snake(this.handAng[n],this.handDir[n], 1, 1);
 			} 
 			return move;
@@ -1075,12 +1122,13 @@ First Prop:
 </td>
 <form>
 <td>
-	<select id="firstProp" onchange="controller.updateParameters()">
-		<option selected>Poi</option>
-		<option>Fire Poi</option>
-		<option>Fire Hoop</option>
-		<option>Fire Staff</option>
-		<option>Fire Fan</option>
+	<select id="1prop" onchange="controller.updateParameters()">
+		<option value ="poi" selected>Poi</option>
+		<option value="fpoi">Fire Poi</option>
+		<option value="hoop">Mini Hoop</option>
+		<option value="fhoop">Fire Hoop</option>
+		<option value="fstaff">Fire Staff</option>
+		<option value="ffan">Fire Fan</option>
 	</select>
 
 </td>
@@ -1090,12 +1138,13 @@ Second Prop:
 </td>
 <form>
 <td>
-	<select id="secondProp" onchange="controller.updateParameters()">
-		<option selected>Poi</option>
-		<option>Fire Poi</option>
-		<option>Fire Hoop</option>
-		<option>Fire Staff</option>
-		<option>Fire Fan</option>
+	<select id="2prop" onchange="controller.updateParameters()">
+		<option value ="poi" selected>Poi</option>
+		<option value="fpoi">Fire Poi</option>
+		<option value="hoop">Mini Hoop</option>
+		<option value="fhoop">Fire Hoop</option>
+		<option value="fstaff">Fire Staff</option>
+		<option value="ffan">Fire Fan</option>
 	</select>
 </td>
 </form>
@@ -1106,9 +1155,9 @@ Hand Relations:
 </td>
 <form>
 <td>
-	<select id="handRelations" onchange="controller.updateParameters()">
-		<option>Same</option>
-		<option selected>Split</option>
+	<select id="hands" onchange="controller.updateParameters()">
+		<option value="same">Same</option>
+		<option value="splt" selected>Split</option>
 	</select>
 </td>
 </form>
@@ -1117,9 +1166,9 @@ Prop Relations:
 </td>
 <form>
 <td>
-	<select id="propRelations" onchange="controller.updateParameters()">
-		<option>Same</option>
-		<option selected>Split</option>
+	<select id="props" onchange="controller.updateParameters()">
+		<option value="same">Same</option>
+		<option value="splt" selected>Split</option>
 	</select>
 </td>
 </form>
@@ -1130,9 +1179,9 @@ Spin Directions:
 </td>
 <form>
 <td>
-	<select id="spinDirections" onchange="controller.updateParameters()">
-		<option selected>Same</option>
-		<option>Opposite</option>
+	<select id="spins" onchange="controller.updateParameters()">
+		<option value = "same" selected>Same</option>
+		<option value="opps">Opposite</option>
 	</select>
 </td>
 </form>
@@ -1145,25 +1194,26 @@ First Move:
 </td>
 <form>
 <td colspan="3">
-	<select id="firstMove" onchange="controller.updateParameters()">
-		<option selected>Static Spin</option>
-		<option>Extension</option>
-		<option>One-Petal In-Spin Flower</option>
-		<option>Two-Petal In-Spin Flower</option>
-		<option>Four-Petal In-Spin Flower</option>
-		<option>Three-Petal Anti-Spin Flower</option>
-		<option>Four-Petal Anti-Spin Flower</option>
-		<option>Horizontal C-CAP</option>
-		<option>Vertical C-CAP</option>
-		<option>Star</option>
-		<option>Pendulum</option>
-		<option>1.5</option>
-		<option>Isolation</option>
-		<option>Cat-Eye</option>
-		<option>Iso-Pop</option>
-		<option>Iso-Break</option>
-		<option>Horizontal Linear Extension</option>
-		<option>Vertical Linear Extension</option>
+	<select id="1move" onchange="controller.updateParameters()">
+		<option value="stat" selected>Static Spin</option>
+		<option value="xtsn">Extension</option>
+		<option value="1pif">One-Petal In-Spin Flower</option>
+		<option value="2pif">Two-Petal In-Spin Flower</option>
+		<option value="4pif">Four-Petal In-Spin Flower</option>
+		<option value="3paf">Three-Petal Anti-Spin Flower</option>
+		<option value="4paf">Four-Petal Anti-Spin Flower</option>
+		<option value="hcap">Horizontal C-CAP</option>
+		<option value="vcap">Vertical C-CAP</option>
+		<option value="star">Star</option>
+		<option value="pend">Pendulum</option>
+		<option value="1pt5">1.5</option>
+		<option value="isol">Isolation</option>
+		<option value="cate">Cat-Eye</option>
+		<option value="utri">Unit Triquetra</option>
+		<option value="isop">Iso-Pop</option>
+		<option value="isob">Iso-Break</option>
+		<option value="hlex">Horizontal Linear Extension</option>
+		<option value="vlex">Vertical Linear Extension</option>
 	</select>
 </td>
 </form>
@@ -1174,30 +1224,34 @@ Second Move:
 </td>
 <form>
 <td colspan="3">
-	<select id="secondMove" onchange="controller.updateParameters()">
-		<option selected>Static Spin</option>
-		<option>Extension</option>
-		<option>One-Petal In-Spin Flower</option>
-		<option>Two-Petal In-Spin Flower</option>
-		<option>Four-Petal In-Spin Flower</option>
-		<option>Three-Petal Anti-Spin Flower</option>
-		<option>Four-Petal Anti-Spin Flower</option>
-		<option>Horizontal C-CAP</option>
-		<option>Vertical C-CAP</option>
-		<option>Star</option>
-		<option>Pendulum</option>
-		<option>1.5</option>
-		<option>Isolation</option>
-		<option>Cat-Eye</option>
-		<option>Iso-Pop</option>
-		<option>Iso-Break</option>
-		<option>Horizontal Linear Extension</option>
-		<option>Vertical Linear Extension</option>
+	<select id="2move" onchange="controller.updateParameters()">
+		<option value="stat" selected>Static Spin</option>
+		<option value="xtsn">Extension</option>
+		<option value="1pif">One-Petal In-Spin Flower</option>
+		<option value="2pif">Two-Petal In-Spin Flower</option>
+		<option value="4pif">Four-Petal In-Spin Flower</option>
+		<option value="3paf">Three-Petal Anti-Spin Flower</option>
+		<option value="4paf">Four-Petal Anti-Spin Flower</option>
+		<option value="hcap">Horizontal C-CAP</option>
+		<option value="vcap">Vertical C-CAP</option>
+		<option value="star">Star</option>
+		<option value="pend">Pendulum</option>
+		<option value="1pt5">1.5</option>
+		<option value="isol">Isolation</option>
+		<option value="cate">Cat-Eye</option>
+		<option value="utri">Unit Triquetra</option>
+		<option value="isop">Iso-Pop</option>
+		<option value="isob">Iso-Break</option>
+		<option value="hlex">Horizontal Linear Extension</option>
+		<option value="vlex">Vertical Linear Extension</option>
 	</select>
 </td>
 </form>
 
 </tr>
 </table>
+<p></p>
+Pasteable link to these settings:
+<p id="myLink"></p>
 </body>
 </html>
