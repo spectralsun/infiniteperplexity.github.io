@@ -706,10 +706,18 @@
 					this.changePhase(2);
 					myProp.setTetherAngle(OFFSET+this.initHandAngle);
 				} else if (this.initHandAngle == THREE) {
-					this.changePhase(3);
+					if (this.dir==COUNTERCLOCKWISE) {
+						this.changePhase(1)
+					} else {
+						this.changePhase(3);
+					}
 					myProp.setTetherAngle(this.initHandAngle);
 				} else if (this.initHandAngle == NINE) {
-					this.changePhase(1);
+					if (this.dir==COUNTERCLOCKWISE) {
+						this.changePhase(3)
+					} else {
+						this.changePhase(1);
+					}
 					myProp.setTetherAngle(this.initHandAngle);
 				} else {
 					myProp.setTetherAngle(this.initHandAngle);
@@ -719,6 +727,7 @@
 
 		function OnePointFive(dir, extend, speed) {	
 			var myMove;
+			this.dir = dir;
 			myMove = new SimpleMove();
 			myMove.beats = 0.25;
 			myMove.setHandExtend(extend);
@@ -758,10 +767,18 @@
 					this.changePhase(2);
 					myProp.setTetherAngle(OFFSET+this.initHandAngle);
 				} else if (this.initHandAngle == THREE) {
-					this.changePhase(3);
+					if (this.dir==COUNTERCLOCKWISE) {
+						this.changePhase(1)
+					} else {
+						this.changePhase(3);
+					}
 					myProp.setTetherAngle(this.initHandAngle);
 				} else if (this.initHandAngle == NINE) {
-					this.changePhase(1);
+					if (this.dir==COUNTERCLOCKWISE) {
+						this.changePhase(3)
+					} else {
+						this.changePhase(1);
+					}
 					myProp.setTetherAngle(this.initHandAngle);
 				} else {
 					myProp.setTetherAngle(this.initHandAngle);
