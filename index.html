@@ -1,6 +1,7 @@
+//Distributed under GNU General Public License Version 3
 <html>
 <head>
-	<title>VisualSpinner 1.0</title>
+	<title>VisualSpinner 1.01</title>
 	<script src="http://code.jquery.com/jquery-1.10.2.min.js"> </script>
 	<script>
 		var HEIGHT = 400;
@@ -44,9 +45,11 @@
 		function init() {
 			ctx=document.getElementById('canvas').getContext('2d');
 			var params = ["1prop","2prop","hands","props","spins","1move","2move"];
+			var defaults = ["poi","poi","splt","splt","same","stat","stat"];
 			for (var i = 0; i<params.length; i++) {
 				var txt = $.urlParam(params[i]);
-				if (txt!=0) {$("#"+params[i]).val(txt);}
+				if (txt==0) {txt = defaults[i];}
+				$("#"+params[i]).val(txt);
 			}
 			canvasSetup();
 			canvasLoop();
@@ -64,17 +67,17 @@
 			propTwo.renderer.head_color = "blue";
 			propTwo.renderer.handle_color = "blue";
 			
-			var move;
-			move = new SimpleMove();
-			move.isOneShot = true;
-			move.initHandAngle = TWELVE;
-			move.initPropAngle = TWELVE;
-			propOne.addMove(move);
-			move = new SimpleMove();
-			move.isOneShot = true;
-			move.initHandAngle = SIX;
-			move.initPropAngle = SIX;
-			propTwo.addMove(move);
+			//var move;
+			//move = new SimpleMove();
+			//move.isOneShot = true;
+			//move.initHandAngle = TWELVE;
+			//move.initPropAngle = TWELVE;
+			//propOne.addMove(move);
+			//move = new SimpleMove();
+			//move.isOneShot = true;
+			//move.initHandAngle = SIX;
+			//move.initPropAngle = SIX;
+			//propTwo.addMove(move);
 
 			myProps.push(propOne);
 			myProps.push(propTwo);
@@ -174,7 +177,7 @@
 			var y2 = this.getHandExtendY();
 			var convert = 0;
 			var angle = 0;
-			if (x2-x2==0) {
+			if (x2-x1==0) {
 				if (y2-y1==0) {
 					angle = 0;
 				} else if (y2-y1>0) {
@@ -184,7 +187,7 @@
 				}
 			} else {
 				if (x2<x1) {convert = Math.PI;}
-				angle = Math.atan((y2-y1)/(x2-x2))+convert;
+				angle = Math.atan((y2-y1)/(x2-x1))+convert;
 			}
 			return unique_angle(angle);
 		}
@@ -220,6 +223,10 @@
 		Prop.prototype.addMove = function(myMove) {
 			if (this.myMoveQueue === undefined) {this.myMoveQueue = new CompositeMove(); this.myMoveQueue.myProp = this;}
 			this.myMoveQueue.addMove(myMove);
+		}
+		Prop.prototype.getMoveQueue = function() {
+		if (this.myMoveQueue === undefined) {this.myMoveQueue = new CompositeMove(); this.myMoveQueue.myProp = this;}
+			return(this.myMoveQueue);
 		}
 		Prop.prototype.addPartneredMove = function(otherProp, myMove) {
 			this.addMove(myMove.getFirstMove());
@@ -318,6 +325,17 @@
 		function MiniStaff() {}
 		MiniStaff.prototype = new PropRenderer();
 		MiniStaff.prototype.render = function() {
+			ctx.save();
+			ctx.fillStyle = this.handle_color;
+			ctx.beginPath();
+			ctx.rect(-this.prop.getPixelLength(),-0.5*this.handle_size,2*this.prop.getPixelLength(),this.handle_size);
+			ctx.fill();
+			ctx.restore();
+		};
+		
+		function FireStaff() {}
+		FireStaff.prototype = new PropRenderer();
+		FireStaff.prototype.render = function() {
 			ctx.save();
 			ctx.fillStyle = this.handle_color;
 			ctx.beginPath();
@@ -687,6 +705,12 @@
 				if (this.initHandAngle == TWELVE) {
 					this.changePhase(2);
 					myProp.setTetherAngle(OFFSET+this.initHandAngle);
+				} else if (this.initHandAngle == THREE) {
+					this.changePhase(3);
+					myProp.setTetherAngle(this.initHandAngle);
+				} else if (this.initHandAngle == NINE) {
+					this.changePhase(1);
+					myProp.setTetherAngle(this.initHandAngle);
 				} else {
 					myProp.setTetherAngle(this.initHandAngle);
 				}
@@ -728,12 +752,20 @@
 		OnePointFive.prototype.autoAlign = function(myProp) {
 	  		if ('undefined' !== typeof this.initHandAngle) {
 		  		myProp.setHandAngle(this.initHandAngle);
-	  		}
-	  		if ('undefined' !== typeof this.initPropAngle) {
+			} 
+			if ('undefined' !== typeof this.initPropAngle) {
 				if (this.initHandAngle == TWELVE) {
 					this.changePhase(2);
+					myProp.setTetherAngle(OFFSET+this.initHandAngle);
+				} else if (this.initHandAngle == THREE) {
+					this.changePhase(3);
+					myProp.setTetherAngle(this.initHandAngle);
+				} else if (this.initHandAngle == NINE) {
+					this.changePhase(1);
+					myProp.setTetherAngle(this.initHandAngle);
+				} else {
+					myProp.setTetherAngle(this.initHandAngle);
 				}
-				myProp.setTetherAngle(OFFSET+this.initHandAngle);
 	  		}
   		} 
 
@@ -961,8 +993,10 @@
 				renderer = new MiniHoop();
 			} else if (txt=="fhoop") {
 				renderer = new FireHoop();
-			} else if (txt=="fstaff") {
+			} else if (txt=="staff") {
 				renderer = new MiniStaff();
+			} else if (txt=="fstaff") {
+				renderer = new FireStaff();
 			} else if (txt=="ffan") {
 				renderer = new FireFan();
 			}
@@ -982,8 +1016,10 @@
 				renderer = new MiniHoop();
 			} else if (txt=="fhoop") {
 				renderer = new FireHoop();
-			} else if (txt=="fstaff") {
+			} else if (txt=="staff") {
 				renderer = new MiniStaff();
+			} else if (txt=="fstaff") {
+				renderer = new FireStaff();
 			} else if (txt=="ffan") {
 				renderer = new FireFan();
 			}
@@ -1003,7 +1039,10 @@
 				this.propAng[0] = TWELVE;
 				this.propAng[1] = SIX;
 			}
-			
+			else if (txt=="qrtr") {
+				this.propAng[0] = TWELVE;
+				this.propAng[1] = THREE;
+			}
 			//Update hand relations for next move
 			list = document.getElementById("hands");
 			txt = list.options[list.selectedIndex].value;
@@ -1014,6 +1053,10 @@
 			else if (txt=="splt") {
 				this.handAng[0] = TWELVE;
 				this.handAng[1] = SIX;
+			}
+			else if (txt=="qrtr") {
+				this.handAng[0] = TWELVE;
+				this.handAng[1] = THREE;
 			}
 			
 			//Update spin directions for next move
@@ -1035,8 +1078,8 @@
 			move.isOneShot = true;
 			move.initHandAngle = this.handAng[0];
 			move.initPropAngle = this.propAng[0];
-			while (myProps[0].myMoveQueue.length > 1) {
-				myProps[0].myMoveQueue.pop();
+			while (myProps[0].getMoveQueue().length > 1) {
+				myProps[0].getMoveQueue().pop();
 			}
 			myProps[0].addMove(move);
 			
@@ -1047,8 +1090,8 @@
 			move.isOneShot = true;
 			move.initHandAngle = this.handAng[1];
 			move.initPropAngle = this.propAng[1];
-			while (myProps[1].myMoveQueue.length > 1) {
-				myProps[1].myMoveQueue.pop();
+			while (myProps[1].getMoveQueue().length > 1) {
+				myProps[1].getMoveQueue().pop();
 			}
 			myProps[1].addMove(move);
 			
@@ -1127,6 +1170,7 @@ First Prop:
 		<option value="fpoi">Fire Poi</option>
 		<option value="hoop">Mini Hoop</option>
 		<option value="fhoop">Fire Hoop</option>
+		<option value="staff">Double Staff</option>
 		<option value="fstaff">Fire Staff</option>
 		<option value="ffan">Fire Fan</option>
 	</select>
@@ -1143,6 +1187,7 @@ Second Prop:
 		<option value="fpoi">Fire Poi</option>
 		<option value="hoop">Mini Hoop</option>
 		<option value="fhoop">Fire Hoop</option>
+		<option value="staff">Double Staff</option>
 		<option value="fstaff">Fire Staff</option>
 		<option value="ffan">Fire Fan</option>
 	</select>
@@ -1158,6 +1203,7 @@ Hand Relations:
 	<select id="hands" onchange="controller.updateParameters()">
 		<option value="same">Same</option>
 		<option value="splt" selected>Split</option>
+		<option value="qrtr">Quarter</option>
 	</select>
 </td>
 </form>
@@ -1169,6 +1215,7 @@ Prop Relations:
 	<select id="props" onchange="controller.updateParameters()">
 		<option value="same">Same</option>
 		<option value="splt" selected>Split</option>
+		<option value="qrtr">Quarter</option>
 	</select>
 </td>
 </form>
