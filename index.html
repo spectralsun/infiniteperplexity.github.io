@@ -1,7 +1,7 @@
 <!--Distributed under GNU Public License version 3-->
 <html><head>
 <meta http-equiv="content-type" content="text/html; charset=windows-1252">
-	<title>VisualSpinner 2.0, by Glenn Wright</title>
+	<title>VisualSpinner 2.1, by Glenn Wright</title>
 <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
 	 <script src="scripts/gl-matrix-min.js"></script>
 	 <script src="scripts/phoria-min.js"></script>
@@ -209,6 +209,8 @@
 					renderer = new FireStaff();
 				} else if (txt=="ffan") {
 					renderer = new FireFan();
+				} else if (txt=="pfan") {
+					renderer = new PracticeFan();
 				} else if (txt=="none") {
 					renderer = new NoProp();
 				}
@@ -643,6 +645,10 @@
 			ctx.beginPath();
 			ctx.rect(-this.prop.getPixelLength(),-0.5*this.handle_size,2*this.prop.getPixelLength(),this.handle_size);
 			ctx.fill();
+			ctx.beginPath();
+			ctx.arc(0,0,this.handle_size,0,UNIT);
+			ctx.fillStyle = "gray";
+			ctx.fill();
 			ctx.restore();
 		};
 		
@@ -662,8 +668,6 @@
 		function MiniHoop() {}
 		MiniHoop.prototype = new PropRenderer();
 		MiniHoop.prototype.render = function() {
-			var wick_length = 25;
-			var num_wicks = 4;
 			ctx.save();
 			ctx.translate(0.5*this.prop.getPixelLength(),0);
 			ctx.beginPath();
@@ -671,9 +675,13 @@
 			ctx.strokeStyle = this.handle_color;
 			ctx.lineWidth = this.handle_size;
 			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc(-0.5*this.prop.getPixelLength(),0,this.handle_size,0,UNIT);
+			ctx.fillStyle = "gray";
+			ctx.fill();
 			ctx.restore();
+
 		}
-		
 		
 		function FireHoop() {}
 		FireHoop.prototype = new PropRenderer();
@@ -728,6 +736,38 @@
 				this.drawWick(this.prop.getPixelLength(),0,this.head_size);
 				ctx.rotate(-angle/(num_wicks-1));
 			}
+			ctx.restore();
+		}
+		
+		function PracticeFan() {
+			this.handle_size = 10;
+		}
+		PracticeFan.prototype = new PropRenderer();
+		PracticeFan.prototype.render = function() {
+			var num_wicks = 5;
+			var angle = num_wicks*UNIT / (2*num_wicks+2);
+			ctx.save();
+			ctx.strokeStyle = this.tether_color;
+			ctx.lineWidth = this.tether_width;
+			ctx.beginPath();
+			ctx.arc(0,0,this.handle_size,0,UNIT);
+			ctx.stroke();
+			ctx.rotate(angle/2);
+			for(var i = 0; i < num_wicks; i++) {
+				ctx.beginPath();
+				ctx.moveTo(this.handle_size,0);
+				ctx.lineTo(0.5*this.prop.getPixelLength(),0);
+				ctx.stroke();
+				ctx.rotate(-angle/(num_wicks-1));
+			}
+			ctx.rotate(angle/(num_wicks-1));
+			ctx.beginPath();
+			ctx.arc(0,0,0.5*this.prop.getPixelLength(),0,angle);
+			ctx.arc(0,0,this.prop.getPixelLength(),angle,0,true);
+			ctx.closePath();
+			ctx.fillStyle = this.head_color;
+			ctx.fill();
+			ctx.stroke();
 			ctx.restore();
 		}
 		
@@ -1408,6 +1448,7 @@ First Prop:
 		<option value="fhoop">Fire Hoop</option>
 		<option value="staff">Double Staff</option>
 		<option value="fstaff">Fire Staff</option>
+		<option value="pfan">Practice Fan</option>
 		<option value="ffan">Fire Fan</option>
 		<option value="none">None</option>
 	</select>
@@ -1426,6 +1467,7 @@ Second Prop:
 		<option value="fhoop">Fire Hoop</option>
 		<option value="staff">Double Staff</option>
 		<option value="fstaff">Fire Staff</option>
+		<option value="pfan">Practice Fan</option>
 		<option value="ffan">Fire Fan</option>
 		<option value="none">None</option>
 	</select>
@@ -1445,6 +1487,7 @@ Third Prop:
 		<option value="fhoop">Fire Hoop</option>
 		<option value="staff">Double Staff</option>
 		<option value="fstaff">Fire Staff</option>
+		<option value="pfan">Practice Fan</option>
 		<option value="ffan">Fire Fan</option>
 		<option value="none">None</option>
 	</select>
@@ -1462,6 +1505,7 @@ Fourth Prop:
 		<option value="fhoop">Fire Hoop</option>
 		<option value="staff">Double Staff</option>
 		<option value="fstaff">Fire Staff</option>
+		<option value="pfan">Practice Fan</option>
 		<option value="ffan">Fire Fan</option>
 		<option value="none">None</option>
 	</select>
