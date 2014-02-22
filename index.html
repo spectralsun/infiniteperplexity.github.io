@@ -39,7 +39,7 @@
 		var YAXIS = [0,-1,0];
 		var XAXIS = [1,0,0];
 		
-		var BEAT = 180;
+		var BEAT = 360;
 		
 		var SPEED = UNIT/BEAT;
 
@@ -314,6 +314,12 @@
 			} else if (txt=="vcap") {
 				move = new CCap(this.handDir[n],0,4,1,1);
 				move.changePhase(1);
+			} else if (txt=="hcpo") {
+				move = new CCap(-this.handDir[n],0,4,1,1);
+				move.changePhase(2);
+			} else if (txt=="vcpo") {
+				move = new CCap(-this.handDir[n],0,4,1,1);
+				move.changePhase(3);
 			} else if (txt=="star") {
 				move = new Star(this.handDir[n], 3, 1, 1, 1);
 			} else if (txt=="pend") {
@@ -334,7 +340,15 @@
 				move = new Snake(this.handAng[n]+STAGGER,this.handDir[n], 1, 1);
 			} else if (txt=="vlex") {
 				move = new Snake(this.handAng[n],this.handDir[n], 1, 1);
-			} 
+			}  else if (txt=="2ant") {
+				move = new FractalTriangle(this.handDir[n],ANTISPIN,0.5);
+			}  else if(txt=="anin") {
+				move = new FractalTriangle(this.handDir[n],INSPIN,0.5);
+			} else if(txt=="zdin") {
+				move = new Diamond(this.handDir[n],INSPIN,1);
+			} else if(txt=="zdan") {
+				move = new Diamond(this.handDir[n],ANTISPIN,1);
+			}
 			return move;
 		}
 		
@@ -1242,6 +1256,96 @@
 			myProp.hand_extend = 0;
   		} 
 		
+		function FractalTriangle(dir, spindir, extend) {
+			var segment;
+			var beat = 12;
+			this.dir = dir;
+			this.spindir = spindir;
+			this.extend = extend;
+			for(var i = 0; i<12; i++) {
+				segment = new SimpleLinear();
+				segment.setHandSpeed(extend*beat*Math.acos(Math.PI/beat));
+				segment.setBeats(1/beat);
+				if  (i==0 || i==1 ||  i==6 || i==11) {
+					if (dir == CLOCKWISE) {segment.hand_trajectory = UNIT/6;}
+					else {segment.hand_trajectory = 2*UNIT/6;}
+				} else if (i==3 || i==4 || i==5 || i==10) {
+					if (dir == CLOCKWISE) {segment.hand_trajectory = UNIT/2}
+					else {segment.hand_trajectory = 0;}
+				} else if (i==2 || i==7 || i==8 || i==9) {
+					if (dir == CLOCKWISE) {segment.hand_trajectory = 5*UNIT/6;}
+					else {segment.hand_trajectory = 4*UNIT/6;}
+				}
+				if (i==2 || i==6 || i==10) {
+					if (spindir == ANTISPIN) {segment.setPropSpeed(-dir*4);}
+					else {segment.setPropSpeed(dir*8);}
+				} else {
+					if (spindir == ANTISPIN) {segment.setPropSpeed(-dir*4/3);}
+					else {segment.setPropSpeed(dir*8/3);}
+				}
+				this.addMove(segment);
+			}
+		}
+		FractalTriangle.prototype = new CompositeMove();
+		FractalTriangle.prototype.autoAlign = function(myProp) {
+			myProp.hand_extend = this.extend;
+			if (this.spindir == ANTISPIN) {
+				if (this.dir == CLOCKWISE) {
+					myProp.setTetherAngle(UNIT/2);
+				} else {
+					myProp.setTetherAngle(0);
+				}
+			} else {
+				myProp.setTetherAngle(3*UNIT/4);
+			}
+		}
+		
+		
+		function Diamond(dir, spindir, extend) {
+			var segment;
+			var beat = 8;
+			this.extend = extend;
+			for(var i = 0; i<8 ;i++) {
+				segment = new SimpleLinear();
+				segment.setBeats(1/beat);
+				if  (i==0 || i==4 ) {
+					segment.hand_trajectory = UNIT/4;
+				} else if (i==2 ) {
+					if (dir == CLOCKWISE) {segment.hand_trajectory = 0}
+					else {segment.hand_trajectory = UNIT/2;}
+				} else if (i==6 ) {
+					if (dir == CLOCKWISE) {segment.hand_trajectory = UNIT/2}
+					else {segment.hand_trajectory = 0;}
+				} else if (i==1|| i== 3) {
+					if (dir == CLOCKWISE) {segment.hand_trajectory = 5*UNIT/8}
+					else {segment.hand_trajectory = 7*UNIT/8;}
+				} else if (i==5|| i== 7) {
+					if (dir == CLOCKWISE) {segment.hand_trajectory = 7*UNIT/8}
+					else {segment.hand_trajectory = 5*UNIT/8;}
+				} 
+				if (i==1 || i==3 || i==5 || i==7) {
+					segment.setHandSpeed(beat*Math.sqrt(2)*extend);
+					if (spindir==INSPIN) {
+						if (i==1 || i==7) {segment.setPropSpeed(dir*spindir*2);}
+						else {segment.setPropSpeed(dir*spindir*6);}
+					} else {
+						if (i==1 || i==7) {segment.setPropSpeed(dir*spindir*6);}
+						else {segment.setPropSpeed(dir*spindir*2);}
+					}
+				} else {
+					segment.setHandSpeed(16*extend);
+					segment.setPropSpeed(dir*spindir*4);
+				}
+				this.addMove(segment);
+			}
+		}
+		Diamond.prototype = new CompositeMove();
+		Diamond.prototype.autoAlign = function(myProp) {
+			myProp.hand_extend = this.extend;
+			myProp.setHandAngle(TWELVE);
+			myProp.setTetherAngle (TWELVE);
+		}
+		
 		function Lock(extend, beats) {
 			move = new SimpleMove();
 			move.setHandExtend(extend);
@@ -1277,6 +1381,9 @@
 				myProp.setTetherAngle(TWELVE);
 			}
 		}
+		
+
+		
 		
 	
 	</script>
@@ -1464,7 +1571,9 @@ First Move:
 		<option value="4paf">Four-Petal Anti-Spin Flower</option>
 		<option value="6paf">Six-Petal Anti-Spin Flower</option>
 		<option value="hcap">Horizontal C-CAP</option>
+		<option value="hcpo">Horizontal C-CAP (offset)</option>
 		<option value="vcap">Vertical C-CAP</option>
+		<option value="vcpo">Vertical C-CAP (offset)</option>
 		<option value="star">Star</option>
 		<option value="pend">Pendulum</option>
 		<option value="1pt5">1.5</option>
@@ -1475,6 +1584,10 @@ First Move:
 		<option value="isob">Iso-Break</option>
 		<option value="hlex">Horizontal Linear Extension</option>
 		<option value="vlex">Vertical Linear Extension</option>
+		<option value="2ant">Double Antispin</option>
+		<option value="anin">Antispin/Inspin</option>
+		<option value="zdin">Zan's Diamond (A)</option>
+		<option value="zdan">Zan's Diamond (B)</option>
 	</select>
 </td>
 
@@ -1495,7 +1608,9 @@ Second Move:
 		<option value="4paf">Four-Petal Anti-Spin Flower</option>
 		<option value="6paf">Six-Petal Anti-Spin Flower</option>
 		<option value="hcap">Horizontal C-CAP</option>
+		<option value="hcpo">Horizontal C-CAP (offset)</option>
 		<option value="vcap">Vertical C-CAP</option>
+		<option value="vcpo">Vertical C-CAP (offset)</option>
 		<option value="star">Star</option>
 		<option value="pend">Pendulum</option>
 		<option value="1pt5">1.5</option>
@@ -1506,6 +1621,10 @@ Second Move:
 		<option value="isob">Iso-Break</option>
 		<option value="hlex">Horizontal Linear Extension</option>
 		<option value="vlex">Vertical Linear Extension</option>
+		<option value="2ant">Double Antispin</option>
+		<option value="anin">Antispin/Inspin</option>
+		<option value="zdin">Zan's Diamond (A)</option>
+		<option value="zdan">Zan's Diamond (B)</option>
 	</select>
 </td>
 </tr>
@@ -1525,7 +1644,9 @@ Third Move:
 		<option value="4paf">Four-Petal Anti-Spin Flower</option>
 		<option value="6paf">Six-Petal Anti-Spin Flower</option>
 		<option value="hcap">Horizontal C-CAP</option>
+		<option value="hcpo">Horizontal C-CAP (offset)</option>
 		<option value="vcap">Vertical C-CAP</option>
+		<option value="vcpo">Vertical C-CAP (offset)</option>
 		<option value="star">Star</option>
 		<option value="pend">Pendulum</option>
 		<option value="1pt5">1.5</option>
@@ -1536,6 +1657,10 @@ Third Move:
 		<option value="isob">Iso-Break</option>
 		<option value="hlex">Horizontal Linear Extension</option>
 		<option value="vlex">Vertical Linear Extension</option>
+		<option value="2ant">Double Antispin</option>
+		<option value="anin">Antispin/Inspin</option>
+		<option value="zdin">Zan's Diamond (A)</option>
+		<option value="zdan">Zan's Diamond (B)</option>
 	</select>
 </td>
 </tr>
@@ -1555,7 +1680,9 @@ Fourth Move:
 		<option value="4paf">Four-Petal Anti-Spin Flower</option>
 		<option value="6paf">Six-Petal Anti-Spin Flower</option>
 		<option value="hcap">Horizontal C-CAP</option>
+		<option value="hcpo">Horizontal C-CAP (offset)</option>
 		<option value="vcap">Vertical C-CAP</option>
+		<option value="vcpo">Vertical C-CAP (offset)</option>
 		<option value="star">Star</option>
 		<option value="pend">Pendulum</option>
 		<option value="1pt5">1.5</option>
@@ -1566,6 +1693,10 @@ Fourth Move:
 		<option value="isob">Iso-Break</option>
 		<option value="hlex">Horizontal Linear Extension</option>
 		<option value="vlex">Vertical Linear Extension</option>
+		<option value="2ant">Double Antispin</option>
+		<option value="anin">Antispin/Inspin</option>
+		<option value="zdin">Zan's Diamond (A)</option>
+		<option value="zdan">Zan's Diamond (B)</option>
 	</select>
 </td>
 </tr>
